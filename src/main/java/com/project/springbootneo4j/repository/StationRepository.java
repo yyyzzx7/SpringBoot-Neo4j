@@ -11,9 +11,8 @@ import java.util.List;
 @Repository
 public interface StationRepository extends Neo4jRepository<Station, Long> {
 
-    // 1. {location}有哪些<{train_type}>站？
-    @Query("MATCH (s:Station)-[:`所属省份`]->(p:Province) WHERE s.name contains {name} OR p.name contains {name} RETURN s")
-    List<Station> getStationMethod1(@Param("name") String name);
+    @Query("MATCH p=(:Station)-[:`途径`]->(:TrainNode)-[:`站点信息`]->(:TrainNo{name:'K1130'})<-[:`站点信息`]-(:TrainNode)<-[:`途径`]-(:Station) RETURN p")
+    List<Station> getStation(@Param("name") String name);
 
 
 }

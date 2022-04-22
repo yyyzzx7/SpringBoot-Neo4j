@@ -7,71 +7,60 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface TrainNoRepository extends Neo4jRepository<TrainNo, Long> {
 
-    // 2. 途径{location/station}的<{train_type}>有哪些？
-    @Query("MATCH (no:TrainNo)-[:`站点信息`]->(:TrainNode)-[:`途径`]->(s:Station) WHERE s.name contains {name} RETURN no")
-    List<TrainNo> getTrainNoMethod2(@Param("name") String name);
+    @Query("MATCH \n" +
+            "(node1:TrainNode)<-[:`站点信息`]-(no:TrainNo{name:\"K1130\"})-[:`站点信息`]->(node2:TrainNode),\n" +
+            "(s1:Station)<-[:`途径`]-(node1)-[:`站点顺序`]->(seq1:TrainInfo{name:\"1\"}),\n" +
+            "(s2:Station)<-[:`途径`]-(node2)-[:`站点性质`]->(it2:TrainInfo{name:\"1\"}),\n" +
+            "(node1)-[:`到达时间`]->(ta1:TrainInfo),\n" +
+            "(node1)-[:`发车时间`]->(td1:TrainInfo),\n" +
+            "(node1)-[:`行驶时长`]->(tt1:TrainInfo),\n" +
+            "(node1)-[:`行驶距离`]->(dt1:TrainInfo),\n" +
+            "(node1)-[:`站点性质`]->(it1:TrainInfo),\n" +
+            "(node2)-[:`到达时间`]->(ta2:TrainInfo),\n" +
+            "(node2)-[:`发车时间`]->(td2:TrainInfo),\n" +
+            "(node2)-[:`行驶时长`]->(tt2:TrainInfo),\n" +
+            "(node2)-[:`行驶距离`]->(dt2:TrainInfo),\n" +
+            "(node2)-[:`站点顺序`]->(seq2:TrainInfo)\n" +
+            "RETURN no.name AS trainNo, s1.name AS stationFrom, ta1.name AS timeArriveFrom, td1.name AS timeDepartureFrom, tt1.name AS timeTravelFrom, dt1.name AS distanceTravelFrom, seq1.name AS seqFrom,  it1.name AS  isTerminalFrom,  s2.name AS stationTo, ta2.name AS timeArriveTo, td2.name AS timeDepartureTo, tt2.name AS timeTravelTo, dt2.name AS distanceTravelTo, seq2.name AS seqTo, it2.name AS isTerminalTo\n")
+    List<Map<String, String>> getTrainNo();
 
+    @Query("MATCH \n" +
+            "(node1:TrainNode)<-[:`站点信息`]-(no:TrainNo{name:{trainNo}})-[:`站点信息`]->(node2:TrainNode),\n" +
+            "(s1:Station)<-[:`途径`]-(node1)-[:`站点顺序`]->(seq1:TrainInfo{name:\"1\"}),\n" +
+            "(s2:Station)<-[:`途径`]-(node2)-[:`站点性质`]->(it2:TrainInfo{name:\"1\"}),\n" +
+            "(node1)-[:`到达时间`]->(ta1:TrainInfo),\n" +
+            "(node1)-[:`发车时间`]->(td1:TrainInfo),\n" +
+            "(node1)-[:`行驶时长`]->(tt1:TrainInfo),\n" +
+            "(node1)-[:`行驶距离`]->(dt1:TrainInfo),\n" +
+            "(node1)-[:`站点性质`]->(it1:TrainInfo),\n" +
+            "(node2)-[:`到达时间`]->(ta2:TrainInfo),\n" +
+            "(node2)-[:`发车时间`]->(td2:TrainInfo),\n" +
+            "(node2)-[:`行驶时长`]->(tt2:TrainInfo),\n" +
+            "(node2)-[:`行驶距离`]->(dt2:TrainInfo),\n" +
+            "(node2)-[:`站点顺序`]->(seq2:TrainInfo)\n" +
+            "RETURN no.name AS trainNo, s1.name AS stationFrom, ta1.name AS timeArriveFrom, td1.name AS timeDepartureFrom, tt1.name AS timeTravelFrom, dt1.name AS distanceTravelFrom, seq1.name AS seqFrom,  it1.name AS  isTerminalFrom,  s2.name AS stationTo, ta2.name AS timeArriveTo, td2.name AS timeDepartureTo, tt2.name AS timeTravelTo, dt2.name AS distanceTravelTo, seq2.name AS seqTo, it2.name AS isTerminalTo\n")
+    List<Map<String, String>> getOneTrainNo(@Param("trainNo") String trainNo);
 
-    // 3. 从{location/station}到{location/station}有什么<{train_type}>？
-    @Query("MATCH (s1:Station)<-[:`途径`]-(id1:TrainNode)<-[:`站点信息`]-(no:TrainNo)-[:`站点信息`]->(id2:TrainNode)-[:`途径`]->(s2:Station)\n" +
-            "WHERE s1.name contains {from} AND s2.name contains {to}\n" +
-            "WITH id1,no,id2\n" +
-            "MATCH (id1)-[:`站点顺序`]->(seq1:TrainInfo),(id2)-[:`站点顺序`]->(seq2:TrainInfo)\n" +
-            "WHERE toInt(seq1.name) < toInt(seq2.name)\n" +
-            "RETURN no")
-    List<TrainNo> getTrainNoMethod3(@Param("from") String from, @Param("to") String to);
-
-
-    // 4. 终点站是{location/station}的<{train_type}>有哪些？
-    @Query("MATCH (s:Station)<-[:`途径`]-(id:TrainNode)-[:`站点性质`]->(:TrainInfo{name:'1'}) WHERE s.name contains {name}\n" +
-            "WITH id\n" +
-            "MATCH (id)<-[:`站点信息`]-(no:TrainNo)\n" +
-            "RETURN no")
-    List<TrainNo> getTrainNoMethod4(@Param("name") String name);
-
-
-    // 5. 从{location/station}出发的<{train_type}>有哪些？
-    @Query("MATCH (s:Station)<-[:`途径`]-(id:TrainNode)-[:`站点性质`]->(:TrainInfo{name:'0'}) WHERE s.name contains {name} and id.name ends with \"-1\"\n" +
-            "WITH id\n" +
-            "MATCH (id)<-[:`站点信息`]-(no:TrainNo)\n" +
-            "RETURN no")
-    List<TrainNo> getTrainNoMethod5(@Param("name") String name);
-
-
-    // 6. {time}从{location/station}到{location/station}有什么<{train_type}>？
-    @Query("MATCH (s1:Station)<-[:`途径`]-(id1:TrainNode)<-[:`站点信息`]-(no:TrainNo)-[:`站点信息`]->(id2:TrainNode)-[:`途径`]->(s2:Station) WHERE s1.name contains {from} AND s2.name contains {to}\n" +
-            "WITH id1,no,id2\n" +
-            "MATCH (id1)-[:`站点顺序`]->(seq1:TrainInfo),(id2)-[:`站点顺序`]->(seq2:TrainInfo),(id1)-[:`发车时间`]->(t:TrainInfo)\n" +
-            "WHERE toInt(seq1.name) < toInt(seq2.name) AND localtime({time})<=localtime(t.name)<=localtime({time})+duration({minutes:30})\n" +
-            "RETURN no")
-    List<TrainNo> getTrainNoMethod6(@Param("time") String time, @Param("from") String from, @Param("to") String to);
-
-
-    // 7. 从{location/station}出发，{time}能到{location/station}的<{train_type}>有哪些？
-    @Query("MATCH (s1:Station)<-[:`途径`]-(id1:TrainNode)<-[:`站点信息`]-(no:TrainNo)-[:`站点信息`]->(id2:TrainNode)-[:`途径`]->(s2:Station) WHERE s1.name contains {from} AND s2.name contains {to}\n" +
-            "WITH id1,no,id2\n" +
-            "MATCH (id1)-[:`站点顺序`]->(seq1:TrainInfo),(id2)-[:`站点顺序`]->(seq2:TrainInfo),(id2)-[r:`发车时间`]->(t:TrainInfo)\n" +
-            "WHERE toInt(seq1.name) < toInt(seq2.name) AND localtime(t.name)<=localtime({time})\n" +
-            "RETURN no")
-    List<TrainNo> getTrainNoMethod7(@Param("time") String time, @Param("from") String from, @Param("to") String to);
-
-
-    // 8. {time}从{location/station}出发，{time}能到{location/station}的<{train_type}>有哪些？
-    @Query("MATCH (s1:Station)<-[:`途径`]-(id1:TrainNode)<-[:`站点信息`]-(no:TrainNo)-[:`站点信息`]->(id2:TrainNode)-[:`途径`]->(s2:Station) WHERE s1.name contains {from} AND s2.name contains {to}\n" +
-            "WITH id1,no,id2\n" +
-            "MATCH (id1)-[:`发车时间`]->(t1:TrainInfo),(id2)-[:`到达时间`]->(t2:TrainInfo),(id1)-[:`站点顺序`]->(seq1:TrainInfo),(id2)-[:`站点顺序`]->(seq2:TrainInfo)\n" +
-            "WHERE localtime({timeStart})<=localtime(t1.name)<= localtime({timeStart})+duration({minutes:30})\n" +
-            "AND localtime(t2.name)<=localtime({timeEnd})\n" +
-            "AND localtime(t1.name)<localtime(t2.name)\n" +
-            "AND toInt(seq1.name) < toInt(seq2.name)\n" +
-            "RETURN no")
-    List<TrainNo> getTrainNoMethod8(@Param("timeStart") String timeStart, @Param("timeEnd") String timeEnd, @Param("from") String from, @Param("to") String to);
-
-
-
+    @Query("MATCH \n" +
+            "(node1:TrainNode)<-[:`站点信息`]-(no:TrainNo{name:{trainNo}})-[:`站点信息`]->(node2:TrainNode),\n" +
+            "(s1:Station)<-[:`途径`]-(node1)-[:`站点顺序`]->(seq1:TrainInfo{name:\"1\"}),\n" +
+            "(s2:Station)<-[:`途径`]-(node2)-[:`站点性质`]->(it2:TrainInfo{name:\"1\"}),\n" +
+            "(node1)-[:`到达时间`]->(ta1:TrainInfo),\n" +
+            "(node1)-[:`发车时间`]->(td1:TrainInfo),\n" +
+            "(node1)-[:`行驶时长`]->(tt1:TrainInfo),\n" +
+            "(node1)-[:`行驶距离`]->(dt1:TrainInfo),\n" +
+            "(node1)-[:`站点性质`]->(it1:TrainInfo),\n" +
+            "(node2)-[:`到达时间`]->(ta2:TrainInfo),\n" +
+            "(node2)-[:`发车时间`]->(td2:TrainInfo),\n" +
+            "(node2)-[:`行驶时长`]->(tt2:TrainInfo),\n" +
+            "(node2)-[:`行驶距离`]->(dt2:TrainInfo),\n" +
+            "(node2)-[:`站点顺序`]->(seq2:TrainInfo)\n" +
+            "RETURN no.name AS trainNo, s1.name AS stationFrom, ta1.name AS timeArriveFrom, td1.name AS timeDepartureFrom, tt1.name AS timeTravelFrom, dt1.name AS distanceTravelFrom, seq1.name AS seqFrom,  it1.name AS  isTerminalFrom,  s2.name AS stationTo, ta2.name AS timeArriveTo, td2.name AS timeDepartureTo, tt2.name AS timeTravelTo, dt2.name AS distanceTravelTo, seq2.name AS seqTo, it2.name AS isTerminalTo\n")
+    List<Map<String, String>> getOneTrainNo2(@Param("trainNo") String trainNo);
 
 }

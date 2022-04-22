@@ -14,7 +14,6 @@ public class Station implements Serializable {
     @Id
     private String name;
 
-
     public String getName() {
         return name;
     }
